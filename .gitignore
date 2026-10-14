@@ -1,0 +1,7 @@
+# allow-list
+*
+!.gitignore
+!index.html
+!sw.js
+!manifest.webmanifest
+!icon.png
