@@ -1,5 +1,5 @@
 // Offline cache for the app. Bump VERSION whenever index.html changes.
-const VERSION = 'v1';
+const VERSION = 'v2';
 const PREFIX = 'answers-screen-';
 const CACHE = PREFIX + VERSION;
 const ASSETS = ['./', './index.html', './manifest.webmanifest', './icon.png'];
