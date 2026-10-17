@@ -15,7 +15,7 @@
 <link rel="icon" href="./icon.png">
 <title>Answers Screen</title>
 <style>
-  :root { --bg:#000; --fg:#f2f2f2; --dim:#8a8a8a; --accent:#ffd166; --font:28px; --strip:260px; --eyew:100px; --lower:#0b1733; }
+  :root { --bg:#000; --fg:#f2f2f2; --dim:#8a8a8a; --accent:#ffd166; --font:28px; --strip:260px; --eyew:100px; --lower:#0b1733; --topbar:0px; }
   * { box-sizing:border-box; }
   html, body { margin:0; height:100%; background:var(--bg); color:var(--fg);
     font-family:-apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif; overflow:hidden; }
@@ -26,7 +26,7 @@
     font-size:var(--font); }
   body.strip #stage { height:var(--strip); border-bottom:1px solid #1e1e1e; padding-bottom:12px; }
   body.half { background:var(--lower); }
-  body.half #stage { height:50%; background:var(--bg); border-bottom:none; padding-bottom:12px; }
+  body.half #stage { top:var(--topbar); height:50%; background:var(--bg); border-bottom:none; padding-bottom:12px; }
   body.eyes-reserve #stage { padding-bottom:calc(var(--eyew) * 0.84 + 16px + env(safe-area-inset-bottom)); }
 
   /* ---- eyes: a fixed point to rest your gaze on ---- */
@@ -83,7 +83,7 @@
   #hints { position:absolute; left:calc(24px + env(safe-area-inset-left)); bottom:calc(8px + env(safe-area-inset-bottom)); font-size:12px; color:#555;
     font-family:ui-monospace, Menlo, monospace; white-space:nowrap; }
   body.strip #hints { top:calc(var(--strip) + 10px); bottom:auto; }
-  body.half #hints { top:calc(50% + 10px); bottom:auto; }
+  body.half #hints { top:calc(var(--topbar) + 50% + 10px); bottom:auto; }
   body.nohints #hints { display:none; }
 
   #blank { position:fixed; inset:0; background:#000; display:none; z-index:50; }
@@ -157,7 +157,8 @@
   <h3>Settings</h3>
   <label><input type="checkbox" id="optStrip"> Strip mode (only the top band shows content)</label>
   <label><input type="checkbox" id="optHalf"> Top half only (phone behind the lid)</label>
-  <label>Lower half color <span class="val" id="lowerVal"></span><input type="color" id="optLower"></label>
+  <label>Top bar height (lowers the content) <span class="val" id="topbarVal"></span><input type="range" id="optTopbar" min="0" max="400" step="5"></label>
+  <label>Bar color <span class="val" id="lowerVal"></span><input type="color" id="optLower"></label>
   <label>Strip height <span class="val" id="stripVal"></span><input type="range" id="optStripH" min="100" max="800" step="10"></label>
   <label>Font size <span class="val" id="fontVal"></span><input type="range" id="optFont" min="14" max="80" step="1"></label>
   <label>Column width <span class="val" id="colwVal"></span><input type="range" id="optColW" min="80" max="900" step="5"></label>
@@ -234,6 +235,7 @@
     strip: store.get('strip', true),
     half: store.get('half', false),
     lower: store.get('lower', '#0b1733'),
+    topbar: store.get('topbar', 155),
     stripH: store.get('stripH', 260),
     font: store.get('font', 28),
     colW: store.get('colWidth', 155),
@@ -246,6 +248,7 @@
     document.body.classList.toggle('strip', settings.strip && !settings.half);
     document.body.classList.toggle('half', settings.half);
     document.documentElement.style.setProperty('--lower', settings.lower);
+    document.documentElement.style.setProperty('--topbar', (settings.half ? settings.topbar : 0) + 'px');
     document.body.classList.toggle('nohints', !settings.hints);
     document.body.classList.toggle('eyes', settings.eyes);
     layoutEyes();
@@ -255,6 +258,7 @@
     $('#optStrip').checked = settings.strip;
     $('#optHalf').checked = settings.half;
     $('#optLower').value = settings.lower; $('#lowerVal').textContent = settings.lower;
+    $('#optTopbar').value = settings.topbar; $('#topbarVal').textContent = settings.topbar + ' px';
     $('#optStripH').value = settings.stripH; $('#stripVal').textContent = settings.stripH + ' px';
     $('#optFont').value = settings.font; $('#fontVal').textContent = settings.font + ' px';
     $('#optColW').value = settings.colW; $('#colwVal').textContent = settings.colW + ' px';
@@ -469,6 +473,7 @@
   $('#optStrip').onchange = e => { settings.strip = e.target.checked; applySettings(); };
   $('#optHalf').onchange = e => { settings.half = e.target.checked; applySettings(); };
   $('#optLower').oninput = e => { settings.lower = e.target.value; applySettings(); };
+  $('#optTopbar').oninput = e => { settings.topbar = +e.target.value; applySettings(); };
   $('#optStripH').oninput = e => { settings.stripH = +e.target.value; applySettings(); };
   $('#optFont').oninput = e => { settings.font = +e.target.value; applySettings(); };
   $('#optColW').oninput = e => { settings.colW = +e.target.value; applySettings(); };
