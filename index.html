@@ -47,6 +47,8 @@
   #note p { margin:0; }
 
   #menu { flex:1; min-height:0; column-width:11em; column-gap:1.6em; column-fill:auto; overflow:hidden; }
+  #menu.single { columns:auto; overflow-y:auto; scrollbar-width:none; }
+  #menu.single::-webkit-scrollbar { display:none; }
   .item { break-inside:avoid; display:flex; gap:.5em; line-height:1.25; margin-bottom:.22em; }
   .item .n { color:var(--accent); font-variant-numeric:tabular-nums; min-width:1.2em; text-align:right; font-weight:600; }
   .item.cat .t::after { content:" ›"; color:var(--dim); }
@@ -304,6 +306,9 @@
         `<div class="item ${c.children.length ? 'cat' : 'leaf'}"><span class="n">${i + 1}</span><span class="t">${esc(c.title)}</span></div>`).join('');
       const more = cur.children.length > 9 ? `<div class="more">+${cur.children.length - 9} more not reachable (max 9 per level)</div>` : '';
       content.innerHTML = note + `<div id="menu">${items}${more}</div>`;
+      const menu = $('#menu');
+      if (menu.scrollWidth > menu.clientWidth + 1 || menu.scrollHeight > menu.clientHeight + 1) menu.classList.add('single');
+      menu.addEventListener('scroll', updateCounter);
     } else {
       content.innerHTML = `<div id="answer"><div class="col"></div><div id="cat">🐛</div></div>`;
       layoutAnswer();
@@ -403,7 +408,15 @@
   function updateCounter() {
     const col = $('#answer .col'), c = $('#counter');
     if (!c) return;
-    if (!col) { c.classList.remove('on'); return; }
+    if (!col) {
+      const menu = $('#menu.single');
+      const cat = $('#cat'); if (cat) cat.style.display = 'none';
+      if (!menu) { c.classList.remove('on'); return; }
+      const below = menu.scrollTop + menu.clientHeight < menu.scrollHeight - 2, above = menu.scrollTop > 2;
+      c.textContent = below ? 'more ▼' : above ? '▲ top' : '';
+      c.classList.toggle('on', below || above);
+      return;
+    }
     const moreBelow = col.scrollTop + col.clientHeight < col.scrollHeight - 2;
     c.textContent = `${itemIdx + 1} / ${items.length}${moreBelow ? ' ▼' : ''}`;
     c.classList.add('on');
@@ -420,7 +433,22 @@
     document.body.classList.add('flash');
     setTimeout(() => { document.body.classList.remove('flash'); flashing = false; then && then(); }, 350);
   }
+  function pageMenu(dir) {
+    const menu = $('#menu.single'); if (!menu) return;
+    const top = menu.getBoundingClientRect().top, H = menu.clientHeight;
+    const rows = [...menu.querySelectorAll('.item')].map(el => ({ t: el.getBoundingClientRect().top - top + menu.scrollTop, b: el.getBoundingClientRect().bottom - top + menu.scrollTop }));
+    if (dir > 0) {
+      const next = rows.find(r => r.b > menu.scrollTop + H + 1);
+      if (next) menu.scrollTop = next.t;
+    } else {
+      const target = menu.scrollTop - H;
+      const prev = rows.find(r => r.t >= target - 1);
+      menu.scrollTop = prev ? Math.max(0, prev.t) : 0;
+    }
+    updateCounter();
+  }
   const scroll = dir => {
+    if ($('#menu.single')) { pageMenu(dir); return; }
     const col = $('#answer .col'); if (!col || flashing) return;
     const step = +col.dataset.step || col.clientHeight;
     if (dir > 0) {
