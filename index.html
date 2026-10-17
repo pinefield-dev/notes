@@ -54,7 +54,7 @@
 
   #answer { flex:1; min-height:0; overflow:hidden; position:relative; }
   .col { margin:0 auto; overflow:hidden; }
-  .col .item { margin:0; line-height:inherit; }
+  .col .item { margin:0; line-height:inherit; overflow-wrap:anywhere; }
   .col .item.bullet { display:flex; align-items:flex-start; gap:.35em; }
   .col .dot { color:var(--accent); flex:none; }
   .col .txt { flex:1; min-width:0; }
@@ -382,6 +382,15 @@
       ? `<div class="item bullet"><span class="dot">•</span><span class="txt">${it.html}</span></div>`
       : `<div class="item">${it.html}</div>`;
     wrapWords(col.querySelector('.txt') || col.firstElementChild);
+    const answer = $('#answer');
+    const baseW = Math.min(settings.colW, answer.clientWidth);
+    col.style.width = baseW + 'px';
+    const dot = col.querySelector('.dot'), txt = col.querySelector('.txt') || col.firstElementChild;
+    const gutter = dot ? txt.getBoundingClientRect().left - col.getBoundingClientRect().left : 0;
+    let widest = 0;
+    for (const w of col.querySelectorAll('.w')) { w.style.whiteSpace = 'nowrap'; w.style.display = 'inline-block'; widest = Math.max(widest, w.getBoundingClientRect().width); w.style.whiteSpace = ''; w.style.display = ''; }
+    const needW = Math.ceil(widest + gutter + 2);
+    if (needW > baseW) col.style.width = Math.min(needW, answer.clientWidth) + 'px';
     const step = +col.dataset.step || col.clientHeight;
     const h = col.firstElementChild.getBoundingClientRect().height;
     const lh = parseFloat(col.style.lineHeight) || lineH();
