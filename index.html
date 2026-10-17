@@ -38,7 +38,7 @@
   #eyes.blink .eye { transform:scaleY(.06); transition:transform .05s ease-out; }
 
   #crumb { flex:none; font-size:.5em; color:var(--dim); text-transform:uppercase; letter-spacing:.04em;
-    margin-bottom:.35em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding-right:5em; }
+    margin-bottom:.35em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   #crumb b { color:var(--accent); font-weight:600; }
   #crumb .sep { margin:0 .4em; color:#444; }
 
@@ -54,7 +54,7 @@
 
   #answer { flex:1; min-height:0; overflow:hidden; position:relative; }
   .col { margin:0 auto; overflow:hidden; }
-  .col .item { margin:0; }
+  .col .item { margin:0; line-height:inherit; }
   .col .item.bullet { display:flex; align-items:flex-start; gap:.35em; }
   .col .dot { color:var(--accent); flex:none; }
   .col .txt { flex:1; min-width:0; }
@@ -63,7 +63,7 @@
   #answer ul { margin:0 0 .5em; padding-left:1.1em; }
   #answer li { margin-bottom:.12em; }
   #answer code { font-family:ui-monospace, Menlo, monospace; font-size:.85em; color:var(--accent); }
-  #counter { position:absolute; right:calc(24px + env(safe-area-inset-right)); top:calc(10px + env(safe-area-inset-top)); color:var(--dim); font-size:.5em; line-height:1.3; display:none; font-variant-numeric:tabular-nums; }
+  #counter { position:absolute; right:calc(24px + env(safe-area-inset-right)); bottom:4px; color:var(--dim); font-size:.5em; line-height:1.3; display:none; font-variant-numeric:tabular-nums; }
   #counter.on { display:block; }
 
   /* ---- butterfly: flashes at the end of a sentence ---- */
@@ -80,10 +80,8 @@
   .empty { color:var(--dim); font-size:.75em; line-height:1.4; }
   .empty kbd, #hints kbd { font-family:ui-monospace, Menlo, monospace; color:var(--accent); }
 
-  #hints { position:absolute; left:calc(24px + env(safe-area-inset-left)); bottom:calc(8px + env(safe-area-inset-bottom)); font-size:12px; color:#555;
-    font-family:ui-monospace, Menlo, monospace; white-space:nowrap; }
-  body.strip #hints { top:calc(var(--strip) + 10px); bottom:auto; }
-  body.half #hints { top:calc(var(--topbar) + 50% + 10px); bottom:auto; }
+  #hints { flex:none; font-size:12px; line-height:1.5; color:#555; margin-bottom:6px;
+    font-family:ui-monospace, Menlo, monospace; }
   body.nohints #hints { display:none; }
 
   #blank { position:fixed; inset:0; background:#000; display:none; z-index:50; }
@@ -120,6 +118,7 @@
 <body>
 
 <div id="stage">
+  <div id="hints"></div>
   <div id="crumb"></div>
   <div id="content"></div>
   <div id="counter"></div>
@@ -143,7 +142,6 @@
   </svg></div>
 </div>
 
-<div id="hints"></div>
   <div id="eyes" aria-hidden="true"><svg viewBox="0 0 100 84">
     <g class="eye"><ellipse cx="26" cy="42" rx="23" ry="20" fill="#f2f2f2"/><circle cx="26" cy="42" r="10.5" fill="#3b6ea8"/><circle cx="26" cy="42" r="5.5" fill="#111"/><circle cx="30" cy="37.5" r="2.6" fill="#fff"/></g>
     <g class="eye"><ellipse cx="74" cy="42" rx="23" ry="20" fill="#f2f2f2"/><circle cx="74" cy="42" r="10.5" fill="#3b6ea8"/><circle cx="74" cy="42" r="5.5" fill="#111"/><circle cx="78" cy="37.5" r="2.6" fill="#fff"/></g>
@@ -386,8 +384,10 @@
     wrapWords(col.querySelector('.txt') || col.firstElementChild);
     const step = +col.dataset.step || col.clientHeight;
     const h = col.firstElementChild.getBoundingClientRect().height;
-    const pad = Math.ceil(h / step) * step - h;
-    if (pad > 0.5) { const sp = document.createElement('div'); sp.style.height = pad + 'px'; col.appendChild(sp); }
+    const lh = parseFloat(col.style.lineHeight) || lineH();
+    const lines = Math.ceil((h - 1) / lh) * lh;
+    const pad = Math.ceil(lines / step) * step - h;
+    if (pad > 0.5) { const sp = document.createElement('div'); sp.style.height = pad + 'px'; col.insertBefore(sp, col.firstChild); }
     col.scrollTop = 0;
     updateCounter();
   }
