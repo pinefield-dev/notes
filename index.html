@@ -241,6 +241,11 @@
 
   // ---------- State ----------
   let md = '', root = null, cur = null;
+  // Menus show five options per page. Page labels: 1..5, then 1.1..5.1, 1.a..5.a, 1.2..5.2, 1.b..5.b, and so on.
+  const PER_PAGE = 5;
+  let menuPage = 0;
+  const pageSuffix = p => p === 0 ? '' : (p % 2 ? '.' + Math.ceil(p / 2) : '.' + String.fromCharCode(96 + p / 2));
+  const menuPages = () => Math.max(1, Math.ceil(cur.children.length / PER_PAGE));
   const settings = {
     strip: store.get('strip', true),
     half: store.get('half', false),
@@ -291,7 +296,7 @@
   function load(text, label) {
     md = text;
     root = parse(md);
-    cur = root;
+    cur = root; menuPage = 0;
     store.set('md', md);
     $('#mdText').value = md;
     render();
@@ -312,10 +317,11 @@
     }
     if (cur.children.length) {
       const note = hasText(cur) ? `<div id="note">${renderBody(cur.body)}</div>` : '';
-      const items = cur.children.slice(0, 9).map((c, i) =>
-        `<div class="item ${c.children.length ? 'cat' : 'leaf'}"><span class="n">${i + 1}</span><span class="t">${esc(c.title)}</span></div>`).join('');
-      const more = cur.children.length > 9 ? `<div class="more">+${cur.children.length - 9} more not reachable (max 9 per level)</div>` : '';
-      content.innerHTML = note + `<div id="menu">${items}${more}</div>`;
+      menuPage = Math.max(0, Math.min(menuPage, menuPages() - 1));
+      const sfx = pageSuffix(menuPage);
+      const items = cur.children.slice(menuPage * PER_PAGE, menuPage * PER_PAGE + PER_PAGE).map((c, i) =>
+        `<div class="item ${c.children.length ? 'cat' : 'leaf'}"><span class="n">${i + 1}${sfx}</span><span class="t">${esc(c.title)}</span></div>`).join('');
+      content.innerHTML = note + `<div id="menu">${items}</div>`;
       const menu = $('#menu');
       if (menu.scrollWidth > menu.clientWidth + 1 || menu.scrollHeight > menu.clientHeight + 1) menu.classList.add('single');
       menu.addEventListener('scroll', updateCounter);
@@ -423,12 +429,15 @@
     const col = $('#answer .col'), c = $('#counter');
     if (!c) return;
     if (!col) {
-      const menu = $('#menu.single');
+      const menu = $('#menu');
       const cat = $('#cat'); if (cat) cat.style.display = 'none';
       if (!menu) { c.classList.remove('on'); return; }
-      const below = menu.scrollTop + menu.clientHeight < menu.scrollHeight - 2, above = menu.scrollTop > 2;
-      c.textContent = below ? 'more ▼' : above ? '▲ top' : '';
-      c.classList.toggle('on', below || above);
+      const single = menu.classList.contains('single');
+      const below = single && menu.scrollTop + menu.clientHeight < menu.scrollHeight - 2;
+      const pages = menuPages();
+      const more = below || menuPage < pages - 1;
+      c.textContent = (pages > 1 ? `page ${menuPage + 1} of ${pages}` : '') + (more ? ' ▼' : '');
+      c.classList.toggle('on', pages > 1 || below);
       return;
     }
     const moreBelow = col.scrollTop + col.clientHeight < col.scrollHeight - 2;
@@ -438,9 +447,9 @@
   }
 
   // ---------- Navigation ----------
-  const drill = i => { if (cur.children[i]) { cur = cur.children[i]; render(); } };
-  const back = () => { if (cur.parent) { cur = cur.parent; render(); } };
-  const home = () => { cur = root; render(); };
+  const drill = i => { if (cur.children[i]) { cur = cur.children[i]; menuPage = 0; render(); } };
+  const back = () => { if (cur.parent) { const from = cur; cur = cur.parent; menuPage = Math.floor(cur.children.indexOf(from) / PER_PAGE); render(); } };
+  const home = () => { cur = root; menuPage = 0; render(); };
   let flashing = false;
   function flashButterfly(then, kind) {
     flashing = true;
@@ -462,8 +471,18 @@
     }
     updateCounter();
   }
+  function menuNav(dir) {
+    const single = $('#menu.single');
+    if (single) {
+      const below = single.scrollTop + single.clientHeight < single.scrollHeight - 2, above = single.scrollTop > 2;
+      if ((dir > 0 && below) || (dir < 0 && above)) { pageMenu(dir); return; }
+    }
+    const next = menuPage + dir;
+    if (next < 0 || next >= menuPages()) return;
+    menuPage = next; render();
+  }
   const scroll = dir => {
-    if ($('#menu.single')) { pageMenu(dir); return; }
+    if ($('#menu')) { menuNav(dir); return; }
     const col = $('#answer .col'); if (!col || flashing) return;
     const step = +col.dataset.step || col.clientHeight;
     if (dir > 0) {
@@ -503,7 +522,8 @@
     if (k === '.' || k === 'Escape') { toggleBlank(); e.preventDefault(); return; }
     if (document.body.classList.contains('blank')) document.body.classList.remove('blank');
 
-    if (k >= '1' && k <= '9') drill(+k - 1);
+    if (k >= '1' && k <= '5') { if (cur.children.length) drill(menuPage * PER_PAGE + (+k - 1)); }
+    else if (k >= '6' && k <= '9') { /* not used: menus show five options per page */ }
     else if (k === 'Backspace' || k === '/' || k === 'ArrowLeft') back();
     else if (k === '0' || k === 'Home') home();
     else if (k === '+' || k === '=' || k === 'ArrowDown' || k === 'PageDown' || k === ' ') scroll(1);
@@ -518,7 +538,7 @@
     e.preventDefault();
   });
 
-  $('#hints').innerHTML = ['<kbd>1-9</kbd> pick', '<kbd>⌫</kbd> back', '<kbd>0</kbd> home', '<kbd>.</kbd> blank',
+  $('#hints').innerHTML = ['<kbd>1-5</kbd> pick', '<kbd>⌫</kbd> back', '<kbd>0</kbd> home', '<kbd>.</kbd> blank',
     '<kbd>+ −</kbd> next / prev', '<kbd>*</kbd> font', '<kbd>F</kbd> strip', '<kbd>E</kbd> edit', '<kbd>O</kbd> open',
     '<kbd>S</kbd> settings', '<kbd>H</kbd> hide this'].join(' · ');
 
