@@ -75,7 +75,12 @@
   #butterfly .cut { fill:var(--bg); }
   #butterfly .body { fill:var(--fg); }
   #butterfly .ant { fill:none; stroke:var(--fg); stroke-width:3; stroke-linecap:round; }
-  body.flash #butterfly { display:flex; animation:pop .35s ease-out forwards; }
+  body.flash-bfly #butterfly { display:flex; animation:pop .35s ease-out forwards; }
+  /* ---- stop sign: flashes at the end of the last sentence of a story ---- */
+  #stopsign { position:absolute; inset:0; display:none; align-items:center; justify-content:center; pointer-events:none; }
+  #stopsign svg { height:min(70%, 180px); width:auto; }
+  body.flash-stop #stopsign { display:flex; animation:pop .35s ease-out forwards; }
+  .stopmark { white-space:nowrap; }
   body.flash #answer { visibility:hidden; }
   @keyframes pop { 0% { opacity:0; transform:scale(.6); } 20% { opacity:1; transform:scale(1.05); } 80% { opacity:1; transform:scale(1); } 100% { opacity:0; transform:scale(1); } }
 
@@ -124,6 +129,11 @@
   <div id="crumb"></div>
   <div id="content"></div>
   <div id="counter"></div>
+  <div id="stopsign" aria-hidden="true"><svg viewBox="0 0 200 200">
+    <polygon points="59,6 141,6 194,59 194,141 141,194 59,194 6,141 6,59" fill="#ffffff"/>
+    <polygon points="62,14 138,14 186,62 186,138 138,186 62,186 14,138 14,62" fill="#d62828"/>
+    <text x="100" y="122" text-anchor="middle" font-family="Helvetica Neue, Arial, sans-serif" font-weight="700" font-size="62" fill="#ffffff" letter-spacing="2">STOP</text>
+  </svg></div>
   <div id="butterfly" aria-hidden="true"><svg viewBox="0 0 200 160">
     <g>
       <path class="wing" d="M104 72 C130 40 165 20 192 12 C180 45 165 70 125 84 C118 86 110 82 104 72 Z"/>
@@ -387,6 +397,10 @@
       ? `<div class="item bullet"><span class="dot">•</span><span class="txt">${it.html}</span></div>`
       : `<div class="item">${it.html}</div>`;
     wrapWords(col.querySelector('.txt') || col.firstElementChild);
+    if (itemIdx === items.length - 1) {
+      const mark = document.createElement('span'); mark.className = 'stopmark'; mark.textContent = '\u00a0🛑';
+      (col.querySelector('.txt') || col.firstElementChild).appendChild(mark);
+    }
     const answer = $('#answer');
     const baseW = Math.min(settings.colW, answer.clientWidth);
     col.style.width = baseW + 'px';
@@ -428,10 +442,11 @@
   const back = () => { if (cur.parent) { cur = cur.parent; render(); } };
   const home = () => { cur = root; render(); };
   let flashing = false;
-  function flashButterfly(then) {
+  function flashButterfly(then, kind) {
     flashing = true;
-    document.body.classList.add('flash');
-    setTimeout(() => { document.body.classList.remove('flash'); flashing = false; then && then(); }, 350);
+    const cls = kind === 'stop' ? 'flash-stop' : 'flash-bfly';
+    document.body.classList.add('flash', cls);
+    setTimeout(() => { document.body.classList.remove('flash', cls); flashing = false; then && then(); }, 350);
   }
   function pageMenu(dir) {
     const menu = $('#menu.single'); if (!menu) return;
@@ -453,7 +468,8 @@
     const step = +col.dataset.step || col.clientHeight;
     if (dir > 0) {
       if (col.scrollTop + col.clientHeight < col.scrollHeight - 2) col.scrollTop += step;
-      else flashButterfly(() => { if (itemIdx < items.length - 1) { itemIdx++; showItem(); } });
+      else if (itemIdx < items.length - 1) flashButterfly(() => { itemIdx++; showItem(); });
+      else flashButterfly(null, 'stop');
     } else {
       if (col.scrollTop > 2) col.scrollTop -= step;
       else flashButterfly(() => { if (itemIdx > 0) { itemIdx--; showItem(); } });
